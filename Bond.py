@@ -1,81 +1,136 @@
-# use the Newton-Raphson method to sove for Yield to Maturity
+# class to define and run analytics on a bond
 # import the required Python packages
-from matplotlib import *
 from numpy import arange
 
 # declare the Bond class
 class Bond:
-    def __init__(self, price, coupon, face_value, n):
+    def __init__(self, price, coupon, call_price, face_value, t, years_to_maturity, num_coupon_periods):
         """
-        Function to initialize the YTM object by setting the basic bond variables - market price, coupon, face value and number of
-        payments remaining until the bond reaches maturity.
+        Function to initialize the bond object by setting the basic bond variables:
+        t = number of years left until the call date of the bond
+        price = market price of the bond
+        coupon = annual coupon of the bond
+        call_price = call price of the bond
+        face_value = face value of the bond
+        num_coupon_periods = the number of coupon payments per year
+        n = number of payments remaining until the bond reaches maturity
+        years_to_maturity = number of years remaining until the bond reaches maturity
         """
+        self.years_to_maturity = years_to_maturity
+        self.n = int(years_to_maturity*num_coupon_periods)
+        self.t = t
         self.price = price
         self.coupon = coupon
+        self.call_price = call_price
         self.face_value = face_value
-        self.n = n
+        self.num_coupon_periods = num_coupon_periods
 
-    def calculate_YTM(self):
+    def calculate_bond_analytics(self):
         """
-        Function to calculate the Yield to Maturity (YTM) of a bond.
+        Function to calculate the the Yield to Maturity (YTM), Yield to Call (YTC), Yield to Worst (YTW), Macaulay Duration
+        and Modified Duration of a bond.
         """
 
-        # define the bond pricing formula, with price moved to the right-hand side, setting the equation to zero
-        # in order to use it in the Newton-Raphson process. This is a function of the Semi-Annual YTM
-        def f(ytm):
-            return (((self.coupon * (1 - (1 / ((1 + ytm) ** self.n)))) / ytm) + (
-                        self.face_value / ((1 + ytm) ** self.n)) - self.price);
+        def f_YTM(YTM):
+            """
+            Define the bond pricing formula with YTM as the independent variable, with price moved to the right-hand side,
+            setting the equation to zero.
+            This allows us to find the root - the YTM.
+            """
+            C = (self.coupon * 0.01 * self.face_value)/self.num_coupon_periods
+            return ((C * (1 - (1 / ((1 + YTM) ** self.n)))) / YTM) + (self.face_value / ((1 + YTM) ** self.n)) - self.price;
 
-        # define the derivative of the function f(ytm)
-        def dfdx(ytm):
-            dfdx = self.coupon / (((1 + ytm) ** self.n) * ytm ** 2) + (self.coupon * self.n) / (
-                        ((1 + ytm) ** (self.n + 1)) * ytm) - (
-                               (self.n * self.face_value) / (1 + ytm) ** (self.n + 1)) - self.coupon / ytm ** 2
-            return dfdx
+        def f_YTC(YTC):
+            """
+            Define the bond pricing formula with YTC as the independent variable, with price moved to the right-hand side,
+            setting the equation to zero.
+            This allows us to find the root - the YTC.
+            """
+            C = self.coupon*0.01*self.face_value
+            return (C / 2)*((1 - (1 + YTC/2) ** (-(2 * self.t)))/(YTC/2)) + self.call_price/((1 + YTC/2)**(2 * self.t)) - self.price;
 
-        # function that uses the the Newton-Raphson process to find a root of function f(ytm)
-        def froot(f, dfdx):
-            # find the initial starting point for the Newton-Raphson process - we define x1 as the
-            # range of possible values for the YTM - between 0.0001 and 1.0 (we use 0.0001 in
-            # order to prevent obtaining a NaN value if we used x = 0)
+        def calculate_yields():
+            """
+            Function that approximates the root of the function f_YTM(YTM) and f_YTC(YTC), in order to approximate the
+            Annual YTM, YTC and YTW of the bond
+            """
+
+            # define the range and increment over which we can find the bond yields (0 to 1)
             x1 = arange(0.0001, 1.0, 0.0001)
-            y1 = f(x1)
+
+            # calculate the functions based on each YTM and YTC value - we then need to find the value closest to 0
+            # (that is, where the price calculated from the yield = the actual bond price)
+            y1 = f_YTM(x1)
+            y2 = f_YTC(x1)
 
             # find the value in x1 that is closest to 0 - start at the index: initial = 0
-            initial = 0
+            initial_YTM = 0
+            initial_YTC = 0
 
-            # search through the values of f(x) - use the smallest possible absolute value as the initial guess
+            # search through the values of f_YTM(x), f_YTC(x) - the smallest absolute value (closest to zero) is the
+            # best approximation for the actual YTM and YTC
             for i in range(0, len(y1)):
-                if abs(y1[initial]) > abs(y1[i]):
-                    initial = i
+                # check if the current YTM value is a better approximation
+                if abs(y1[initial_YTM]) > abs(y1[i]):
+                    initial_YTM = i
+                # check if the current YTC value is a better approximation
+                if abs(y2[initial_YTC]) > abs(y2[i]):
+                    initial_YTC = i
 
-            # set the initial guess value for YTM, based on the index value of 'initial', found above
-            x = x1[initial]
+            # calculate the YTM and YTC values based on the approximations above
+            YTM = self.num_coupon_periods*x1[initial_YTM]
+            YTC = x1[initial_YTC]
 
-            # Define variables for the Newton-Raphson process
-            err = 1.0e-6
-            nmax = 30
-            error = 1.0
-            n = 0
+            # calculate the YTW value - the minimum of the YTM and YTC
+            YTW = min(YTM, YTC)
 
-            # Calculate the root approximation, using the Newton-Raphson process
-            while ((abs(error) > abs(err)) and (n < nmax)):
-                n = n + 1
-                error = - f(x) / dfdx(x)
-                x = x + error
-            return x
+            # return the YTM, YTC and YTW of the bond
+            return YTM, YTC, YTW;
 
-        # Find approximation for the root of f(ytm) - the value of the Semi-Annual Yield to Maturity of the bond
-        YTM = froot(f, dfdx)
+        def calculate_durations(ytm):
+            """
+            Function that calculates the Macaulay Duration and Modified Duration of the bond, based on the Annual YTM
+            of the bond
+            """
 
-        # print the value of the Semi-Annual Yield to Maturity of the bond, to 2 decimal places
-        print ('Yield to Maturity (Semi-Annual) = {0:.2f}%'.format((YTM * 100)))
+            # calculate the coupon of the bond
+            i = self.coupon * 0.01
+            # calculate the periodic coupon payment of the bond
+            C = self.coupon * 0.01 * self.face_value
 
-        # return the value of the Semi-Annual Yield to Maturity
-        return YTM;
+            # calculate the present value of the bond
+            PV = 0
+            for t in range(1, self.n + 1, 1):
+                PV += ((t * C) / ((1 + i) ** t))
 
-# instantiate a bond with market price = $95.92, coupon = 2.5%, face value = $100 and number of payments remaining = 5
-bond = Bond(95.92,2.5,100.0,5.0)
+            # calculate the Macaulay Duration of the bond
+            macaulay_duration = (PV + ((self.n * self.face_value) / ((1 + i) ** t))) / self.price
 
-# calcualte the Yield to Maturity of the bond
-bond.calculate_YTM()
+            # calculate the Modified Duration of the bond
+            modified_duration = macaulay_duration/(1 + ytm/self.num_coupon_periods)
+
+            # return the Macaulay Duration and Modified Duration of the bond
+            return macaulay_duration, modified_duration;
+
+        # calculate the YTM, YTC and YTW of the bond
+        YTM, YTC, YTW = calculate_yields()
+
+        # calculate the Macaulay Duration and Modified Duration of the bond
+        macaulay_duration, modified_duration = calculate_durations(YTM)
+
+        # print the values of the YTM, YTC, YTW, Macaulay Duration and Modified Duration of the bond
+        print ('Yield to Maturity (Annual) = {0:.2f}%'.format((YTM * 100)))
+        print('Yield to Call (Annual) = {0:.2f}%'.format((YTC * 100)))
+        print('Yield to Worst (Annual) = {0:.2f}%'.format((YTW * 100)))
+        print('Macaulay Duration = {0:.2f} years'.format(macaulay_duration))
+        print('Modified Duration = {0:.2f} years'.format(modified_duration))
+
+        # return the values of the YTM, YTC, YTW, Macaulay Duration and Modified Duration of the bond
+        return YTM, YTC, YTW, macaulay_duration, modified_duration;
+
+# instantiate a bond with market price = $1000, annual coupon = 5%, call price = $1100, face value = $1000, years left until
+# the call date = 5, years remaining until maturity = 5 and number of coupon payments per year = 2
+bond = Bond(1000, 5, 1100, 1000, 5, 5, 1)
+
+# run analytics on the bond
+bond.calculate_bond_analytics()
