@@ -118,7 +118,7 @@ X = np.array([[0.1, 0.3, 0.4, 0.8, 0.9],
               [0.1, 0.82, 0.43, 0.23, 0.9],
               [0.32, 0.24, 0.24, 0.1, 0.55]])
 
-# calculate the Analytical VaR and the associated values
+# calculate the Analytical VaR at -5% daily returns and the associated values
 x, pdf, a, A_VaR = Analytical_VaR(X, W, -0.05, 100000)
 
 # print the Analytical VaR
@@ -127,7 +127,7 @@ print(A_VaR)
 # plot the Analytical VaR
 plot_Analytical_VaR(x, pdf, a)
 
-# calculate the overall historical portfolio returns, and the Historical VaR
+# calculate the overall historical portfolio returns, and the Historical VaR at 50% daily returns
 portfolio_returns, H_VaR = Historical_VaR(X, W, 0.5)
 
 # print the overall historical portfolio returns, and the Historical VaR
