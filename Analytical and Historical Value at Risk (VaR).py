@@ -1,9 +1,7 @@
 import numpy as np
-from numba import jit
 from scipy import integrate
 import matplotlib.pyplot as plt
 
-#@jit(nopython = True, cache = False)
 def Analytical_VaR(returns, weights, a, n):
     """
     Calculate the Analytical VaR for a portfolio comprised of returns.shape[0] assets. This takes in several parameters.
@@ -63,17 +61,16 @@ def Analytical_VaR(returns, weights, a, n):
 
 def Historical_VaR(returns, weights, a):
     """
-    Calculate the Analytical VaR for a portfolio comprised of returns.shape[0] assets. This takes in several parameters.
+    Calculate the Historical VaR for a portfolio comprised of returns.shape[0] assets. This takes in several parameters.
     The first is a numpy array - returns, where each row corresponds to the historical daily returns (given as a decimal
-    value) of each asset. Next the numpy array, weights, represents the weight of each asset in the portfolio. The
-    integer a is the percentage point from which we take the VaR - for example, a value of a = 0.05 represents the cdf
-    up to 5% of daily portfolio returns. Finally the integer n represents the number of data points to use when plotting
-    the Normal Distribution.
+    value) of each asset. Next the numpy array, weights, represents the weight of each asset in the portfolio. Finally,
+    the integer a is the percentage point from which we take the VaR - for example, a value of a = 0.05 represents the
+    cdf up to 5% of daily portfolio returns.
 
     :param returns: np.array([float])
     :param weights: np.array([float])
     :param a: float
-    :return: np.array([float]), np.array([float]), float
+    :return: np.array([float]), float
     """
 
     # generate the transform of the 1D numpy weights array
