@@ -34,7 +34,7 @@ def Analytical_VaR(returns, weights, a, n):
     # calculate the mean return of the portfolio
     mu = np.sum(mean_asset_returns)/returns.shape[0]
 
-    # set the plot range at 9 standard deviations from the mean
+    # set the plot range at 9 standard deviations from the mean in both the left and right directions
     plot_range = 9 * sigma
 
     # set the bottom value on the x-axis (of % daily returns)
