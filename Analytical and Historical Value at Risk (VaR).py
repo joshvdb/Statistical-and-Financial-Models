@@ -151,8 +151,11 @@ print(portfolio_returns, H_VaR)
 import unittest
 
 class VaR_Testing(unittest.TestCase):
+    # define the VaR testing function
     def test_VaR(self):
+        # test the Historical VaR - confirm that it has the correct value
         _, H_VaR = Historical_VaR(X, W, 0.5)
+        # test the Analytical VaR - confirm that it has the correct value to 4 decimal places
         _, _, _, A_VaR = Analytical_VaR(X, W, -0.05, 100000)
         self.assertEqual(H_VaR, 0.4)
         self.assertEqual(round(A_VaR, 4), 0.1237)
