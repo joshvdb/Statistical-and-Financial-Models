@@ -1,7 +1,9 @@
 import numpy as np
+from numba import jit
 from scipy import integrate
 import matplotlib.pyplot as plt
 
+#@jit(nopython = True, cache = False)
 def Analytical_VaR(returns, weights, a, n):
     """
     Calculate the Analytical VaR for a portfolio comprised of returns.shape[0] assets. This takes in several parameters.
@@ -106,6 +108,18 @@ def plot_Analytical_VaR(x, pdf, a):
 
     return;
 
+# under construction
+def plot_Historical_VaR(x, pdf, a, bin_width):
+    plt.scatter(self.x_values, self.y_values, c='b', marker='^', label='Historical VaR')
+    plt.plot(x, pdf, linewidth=2, color='r', label='VaR cut-off')
+    plt.legend(loc='upper left')
+    plt.xlabel('Daily Returns')
+    plt.ylabel('Frequency')
+    plt.title('Frequency vs Daily Returns')
+    plt.show()
+
+    return;
+
 # declare the weight of each asset in the portfolio - each element in the row is the weight of the nth asset
 W = np.array([0.25, 0.15, 0.2, 0.3, 0.05, 0.05])
 
@@ -136,8 +150,8 @@ print(portfolio_returns, H_VaR)
 # perform unit testing to verify the values of the Analytical and Historical VaR
 import unittest
 
-class MyTestCase(unittest.TestCase):
-    def test_something(self):
+class VaR_Testing(unittest.TestCase):
+    def test_VaR(self):
         _, H_VaR = Historical_VaR(X, W, 0.5)
         _, _, _, A_VaR = Analytical_VaR(X, W, -0.05, 100000)
         self.assertEqual(H_VaR, 0.4)
