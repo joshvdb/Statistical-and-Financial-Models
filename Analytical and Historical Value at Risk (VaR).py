@@ -3,7 +3,6 @@ from numba import jit
 from scipy import integrate
 import matplotlib.pyplot as plt
 
-#@jit(nopython = True, cache = False)
 def Analytical_VaR(returns, weights, a, n):
     """
     Calculate the Analytical VaR for a portfolio comprised of returns.shape[0] assets. This takes in several parameters.
@@ -100,18 +99,6 @@ def plot_Analytical_VaR(x, pdf, a):
     """
     plt.plot(x, pdf, linewidth=2, color='r', label='Distribution of Returns')
     plt.fill_between(x[0:a], pdf[0:a], facecolor='blue', label='Analytical VaR')
-    plt.legend(loc='upper left')
-    plt.xlabel('Daily Returns')
-    plt.ylabel('Frequency')
-    plt.title('Frequency vs Daily Returns')
-    plt.show()
-
-    return;
-
-# under construction
-def plot_Historical_VaR(x, pdf, a, bin_width):
-    plt.scatter(self.x_values, self.y_values, c='b', marker='^', label='Historical VaR')
-    plt.plot(x, pdf, linewidth=2, color='r', label='VaR cut-off')
     plt.legend(loc='upper left')
     plt.xlabel('Daily Returns')
     plt.ylabel('Frequency')
