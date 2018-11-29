@@ -153,11 +153,13 @@ import unittest
 class VaR_Testing(unittest.TestCase):
     # define the VaR testing function
     def test_VaR(self):
-        # test the Historical VaR - confirm that it has the correct value
+        # calculate the Historical VaR
         _, H_VaR = Historical_VaR(X, W, 0.5)
-        # test the Analytical VaR - confirm that it has the correct value to 4 decimal places
+        # calculate the Analytical VaR
         _, _, _, A_VaR = Analytical_VaR(X, W, -0.05, 100000)
+        # test the Historical VaR - confirm that it has the correct value
         self.assertEqual(H_VaR, 0.4)
+        # test the Analytical VaR - confirm that it has the correct value to 4 decimal places
         self.assertEqual(round(A_VaR, 4), 0.1237)
 
 if __name__ == '__main__':
