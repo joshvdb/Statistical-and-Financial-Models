@@ -8,14 +8,14 @@ import matplotlib.pyplot as plt
 class LinearRegression:
     def __init__(self, x_values, y_values):
         """
-        Function to initialize the LG object, taking in two arrays - the x values and the y values
+        Function to initialize the LG object, taking in two arrays - the x values and the y values.
         """
         self.x_values = x_values
         self.y_values = y_values
 
     def calculate_means(self):
         """
-        Function to calculate the mean of the x and y datasets
+        Function to calculate the mean of the x and y datasets.
         """
 
         sum_x = np.sum(self.x_values)
@@ -28,7 +28,7 @@ class LinearRegression:
 
     def regression(self):
         """
-        Function to calculate and plot the line of best fit for the x and y datasets
+        Function to calculate and plot the line of best fit for the x and y datasets.
         """
 
         # get the means of the x and y datasets
