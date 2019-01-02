@@ -237,7 +237,7 @@ def plot_historical_var(x, a, bins):
 # declare the weight of each asset in the portfolio - each element in the row is the weight of the nth asset
 W = np.array([0.25, 0.15, 0.2, 0.3, 0.05, 0.05])
 
-# declare the returns of each asset in the portfolio - each row represents an asset, each element in a row is the
+# declare the returns of each asset in the portfolio - each row represents an asset, and each element in a row is the
 # daily return of that asset at a point in time. Here we have 6 assets, with 5 historical returns each
 X = np.array([[0.1, 0.3, 0.4, 0.8, 0.9],
                [0.20, 0.90, 0.25, 0.1, 0.09],
