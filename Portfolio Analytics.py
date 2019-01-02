@@ -296,11 +296,14 @@ class VaRTesting(unittest.TestCase):
 
         # calculate the Historical VaR
         H_VaR = historical_var(X, W, 0.5)
+
         # calculate the Analytical VaR
         _, _, _, A_VaR = analytical_var(X, W, -0.05, 100000)
+
         # test the Historical VaR - confirm that it has the correct value
         self.assertEqual(H_VaR, 0.4)
-        # test the Analytical VaR - confirm that it has the correct value to 4 decimal places
-        self.assertEqual(round(A_VaR, 4), 0.0805)
+
+        # test the Analytical VaR - confirm that it has the correct value to 6 decimal places
+        self.assertEqual(round(A_VaR, 6), 0.080493)
 
 unittest.main()
