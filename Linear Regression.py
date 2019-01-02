@@ -24,7 +24,7 @@ class LinearRegression:
         x_mean = sum_x / self.x_values.shape[0]
         y_mean = sum_y / self.y_values.shape[0]
 
-        return x_mean, y_mean;
+        return x_mean, y_mean
 
     def regression(self):
         """
@@ -60,7 +60,7 @@ class LinearRegression:
         plt.show()
 
         # return the values of the intercept, gradient and y-coordinates of the line of best fit
-        return intercept, gradient, best_fit;
+        return intercept, gradient, best_fit
 
 # declare x and y values in lists
 x = np.array([63, 64, 66, 69, 69, 71, 71, 72, 73, 75])
