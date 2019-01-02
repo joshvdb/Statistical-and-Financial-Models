@@ -284,8 +284,16 @@ import unittest
 
 
 class VaRTesting(unittest.TestCase):
-    # define the VaR testing function
+    """
+    Unit Testing class for the VaR functions.
+    """
     def test_VaR(self):
+        """
+        Function to test the values of the Analytical and Historical VaR.
+
+        :return:
+        """
+
         # calculate the Historical VaR
         H_VaR = historical_var(X, W, 0.5)
         # calculate the Analytical VaR
