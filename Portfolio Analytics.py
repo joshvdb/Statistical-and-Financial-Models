@@ -246,7 +246,7 @@ X = np.array([[0.1, 0.3, 0.4, 0.8, 0.9],
               [0.1, 0.82, 0.43, 0.23, 0.9],
               [0.32, 0.24, 0.24, 0.1, 0.55]])
 
-# calculate the returns of the portfolio
+# calculate the historical returns of the portfolio
 port_returns = portfolio_returns(X, W)
 
 # declare the historical returns of the benchmark index
@@ -255,6 +255,7 @@ market_returns = np.array([0.8,1.9,0.1003,10.9,0.1])
 # calculate the Beta of the portfolio
 B = beta(port_returns, market_returns)
 
+# print the various portfolio analytics values
 print('Historical Portfolio Returns = ' + str(port_returns))
 
 print('Portfolio R-Squared = ' + str(r_squared(port_returns, market_returns)))
@@ -273,7 +274,7 @@ x, pdf, a, A_VaR = analytical_var(X, W, -0.05, 100000)
 # plot the Analytical VaR
 plot_analytical_var(x, pdf, a)
 
-# calculate the overall historical portfolio returns, and the Historical VaR at 50% daily returns
+# calculate  the Historical VaR at 50% daily returns
 H_VaR = historical_var(X, W, 0.5)
 
 # plot the Historical VaR
