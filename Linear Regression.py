@@ -13,26 +13,26 @@ class LinearRegression:
         self.x_values = x_values
         self.y_values = y_values
 
+    def calculate_means(self):
+        """
+        Function to calculate the mean of the x and y datasets
+        """
+
+        sum_x = np.sum(self.x_values)
+        sum_y = np.sum(self.y_values)
+
+        x_mean = sum_x / self.x_values.shape[0]
+        y_mean = sum_y / self.y_values.shape[0]
+
+        return x_mean, y_mean;
+
     def regression(self):
         """
         Function to calculate and plot the line of best fit for the x and y datasets
         """
 
-        def calculate_means():
-            """
-            Function to calculate the mean of the x and y datasets
-            """
-
-            sum_x = np.sum(self.x_values)
-            sum_y = np.sum(self.y_values)
-
-            x_mean = sum_x / self.x_values.shape[0]
-            y_mean = sum_y / self.y_values.shape[0]
-
-            return x_mean, y_mean;
-
         # get the means of the x and y datasets
-        x_mean, y_mean = calculate_means()
+        x_mean, y_mean = self.calculate_means()
 
         # declare the numerator and denominator used to calculate the gradient of the line of best fit and
         # calculate the gradient of the line of best fit
