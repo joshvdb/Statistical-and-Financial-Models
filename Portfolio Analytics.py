@@ -280,6 +280,7 @@ H_VaR = historical_var(X, W, 0.5)
 bins = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
 plot_historical_var(port_returns, 0.5, bins)
 
+
 # perform unit testing to verify the values of the Analytical and Historical VaR
 class VaRTesting(unittest.TestCase):
     """
