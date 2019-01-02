@@ -64,7 +64,7 @@ def portfolio_volatility(returns, weights):
     """
 
     # generate the transform of the 1D numpy weights array
-    W_T = [[x] for x in weights]
+    W_T = np.array([[x] for x in weights])
 
     # calculate the covariance matrix of the asset returns
     covariance = np.cov(returns)
