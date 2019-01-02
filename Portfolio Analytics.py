@@ -1,3 +1,4 @@
+import unittest
 import numpy as np
 from scipy import integrate
 import matplotlib.pyplot as plt
@@ -280,9 +281,6 @@ bins = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
 plot_historical_var(port_returns, 0.5, bins)
 
 # perform unit testing to verify the values of the Analytical and Historical VaR
-import unittest
-
-
 class VaRTesting(unittest.TestCase):
     """
     Unit Testing class for the VaR functions.
