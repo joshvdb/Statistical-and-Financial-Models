@@ -234,7 +234,7 @@ def plot_historical_var(x, a, bins):
     plt.show()
 
 
-# declare the weight of each asset in the portfolio - each element in the row is the weight of the nth asset
+# declare the weight of each asset in the portfolio - each element in the row corresponds to the weight of the Nth asset
 W = np.array([0.25, 0.15, 0.2, 0.3, 0.05, 0.05])
 
 # declare the returns of each asset in the portfolio - each row represents an asset, and each element in a row is the
