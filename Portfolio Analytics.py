@@ -21,21 +21,21 @@ def portfolio_returns(returns, weights):
     return port_returns
 
 
-def alpha(port_returns, risk_free_rate, market_returns, B):
+def alpha(port_returns, risk_free_rate, market_returns, b):
     """
     Calculate the Alpha of the portfolio.
 
     :param port_returns: np.array([float])
     :param risk_free_rate: np.array([float])
     :param market_returns: np.array([float])
-    :param B: float
+    :param b: float
     :return: float
     """
 
     # the portfolio Alpha is given by the below equation, as stated by the Capital Asset Pricing Model
-    A = np.sum(port_returns - risk_free_rate + B*(market_returns - risk_free_rate))
+    a = np.sum(port_returns - risk_free_rate + b*(market_returns - risk_free_rate))
 
-    return A
+    return a
 
 
 def beta(port_returns, market_returns):
@@ -49,9 +49,9 @@ def beta(port_returns, market_returns):
 
     # the portfolio Beta is given by the covariance of the returns of the portfolio and the returns of the market,
     # divided by the variance of the returns of the market
-    B = np.cov(np.array([port_returns, market_returns]))[0][1]/np.cov([port_returns, market_returns])[1][1]
+    b = np.cov(np.array([port_returns, market_returns]))[0][1]/np.cov([port_returns, market_returns])[1][1]
 
-    return B
+    return b
 
 
 def portfolio_volatility(returns, weights):
@@ -171,7 +171,7 @@ def historical_var(returns, weights, a):
     :param returns: np.array([float])
     :param weights: np.array([float])
     :param a: float
-    :return: np.array([float]), float
+    :return: float
     """
 
     # calculate the total portfolio returns
