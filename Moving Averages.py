@@ -1,10 +1,12 @@
 import numpy as np
 from numba import jit
 
-@jit(nopython = True, cache = False)
+
+@jit(nopython=True, cache=False)
 def sma(matrix, interval):
     """
     Function to implement a Simple Moving Average, optimized with Numba.
+
     :param matrix: np.array([float])
     :param interval: int
     :return: np.array([float])
@@ -19,11 +21,13 @@ def sma(matrix, interval):
 
     return s
 
-@jit(nopython = True, cache = False)
+
+@jit(nopython=True, cache=False)
 def ema(matrix, alpha):
     """
     Function to implement an Exponential Moving Average, optimized with Numba. The variable alpha represents the degree
     of weighting decrease, a constant smoothing factor between 0 and 1. A higher alpha discounts older observations faster.
+
     :param matrix: np.array([float])
     :param alpha: float
     :return: np.array([float])
@@ -40,6 +44,7 @@ def ema(matrix, alpha):
         e[t] = alpha*matrix[t] + (1 - alpha)*e[t - 1]
 
     return e
+
 
 # declare SMA and EMA variables
 interval = 2
