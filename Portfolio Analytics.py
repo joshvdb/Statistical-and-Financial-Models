@@ -29,8 +29,9 @@ def sma(matrix, interval):
 @jit(nopython=True, cache=False)
 def ema(matrix, alpha):
     """
-    Function to implement an Exponential Moving Average (EMA), optimized with Numba. The variable alpha represents the degree
-    of weighting decrease, a constant smoothing factor between 0 and 1. A higher alpha discounts older observations faster.
+    Function to implement an Exponential Moving Average (EMA), optimized with Numba. The variable alpha represents the
+    degree of weighting decrease, a constant smoothing factor between 0 and 1. A higher alpha discounts older
+    observations faster.
 
     :param matrix: np.array([float])
     :param alpha: float
