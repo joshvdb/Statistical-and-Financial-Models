@@ -1,9 +1,105 @@
 import numpy as np
+from numba import jit
 from scipy import integrate
-import pandas_datareader
-import matplotlib.pyplot as plt
 from datetime import datetime
+import matplotlib.pyplot as plt
 import pandas_datareader.data as web
+
+
+@jit(nopython=True, cache=False)
+def sma(matrix, interval):
+    """
+    Function to implement a Simple Moving Average (SMA), optimized with Numba.
+
+    :param matrix: np.array([float])
+    :param interval: int
+    :return: np.array([float])
+    """
+
+    # declare empty SMA numpy array
+    s = np.zeros((matrix.shape[0] - interval))
+
+    # calculate the value of each point in the Simple Moving Average array
+    for t in range(0, s.shape[0]):
+        s[t] = np.sum(matrix[t:t + interval])/interval
+
+    return s
+
+
+@jit(nopython=True, cache=False)
+def ema(matrix, alpha):
+    """
+    Function to implement an Exponential Moving Average (EMA), optimized with Numba. The variable alpha represents the degree
+    of weighting decrease, a constant smoothing factor between 0 and 1. A higher alpha discounts older observations faster.
+
+    :param matrix: np.array([float])
+    :param alpha: float
+    :return: np.array([float])
+    """
+
+    # declare empty EMA numpy array
+    e = np.zeros(matrix.shape[0])
+
+    # set the value of the first element in the EMA array
+    e[0] = matrix[0]
+
+    # use the EMA formula to calculate the value of each point in the EMA array
+    for t in range(1, matrix.shape[0]):
+        e[t] = alpha*matrix[t] + (1 - alpha)*e[t - 1]
+
+    return e
+
+
+@jit(nopython=True, cache=False)
+def twap(high, low, open, close, interval):
+    """
+    Function to implement a Time-Weighted Average Price (TWAP), optimized with Numba.
+
+    :param high: np.array([float])
+    :param low: np.array([float])
+    :param open: np.array([float])
+    :param close: np.array([float])
+    :param interval: int
+    :return: np.array([float])
+    """
+
+    # calculate prices data for each day
+    prices = (high + low + open + close) / 4
+
+    # declare empty TWAP numpy array
+    p = np.zeros((prices.shape[0] - interval))
+
+    # calculate the value of each point in the TWAP array
+    for t in range(0, p.shape[0]):
+        p[t] = np.sum(prices[t:t + interval]) / interval
+
+    return p
+
+
+@jit(nopython=True, cache=False)
+def vwap(high, low, close, volumes, interval):
+    """
+    Function to implement a Volume-Weighted Average Price (VWAP), optimized with Numba.
+
+    :param high: np.array([float])
+    :param low: np.array([float])
+    :param close: np.array([float])
+    :param volumes: np.array([float])
+    :param interval: int
+    :return: np.array([float])
+    """
+
+    # calculate prices data for each day
+    prices = (high + low + close) / 3
+
+    # declare empty VWAP numpy array
+    p = np.zeros((prices.shape[0] - interval))
+
+    # calculate the value of each point in the VWAP array
+    for t in range(0, p.shape[0]):
+        p[t] = np.sum(prices[t:t + interval]*volumes[t:t + interval]) / np.sum(volumes[t:t + interval])
+
+    return p
 
 
 def portfolio_returns(returns, weights):
@@ -168,7 +264,8 @@ def historical_var(returns, weights, a, num_plot_points):
     The first is a numpy array - returns, where each row corresponds to the historical daily returns (given as a decimal
     value) of each asset. Next the numpy array, weights, represents the weight of each asset in the portfolio. Finally,
     the integer a is the percentage point from which we take the VaR - for example, a value of a = 0.05 represents the
-    cdf up to 5% of daily portfolio returns.
+    cdf up to 5% of daily portfolio returns. The variable num_plot_points is the number of plot points to use on the
+    horizontal axis (the %daily return) when plotting the Historical VaR.
 
     :param returns: np.array([float])
     :param weights: np.array([float])
@@ -196,7 +293,7 @@ def historical_var(returns, weights, a, num_plot_points):
     sorted_returns = sorted(port_returns, reverse=False)
 
     # create a numpy array of the bins to use for plotting the Historical VaR, based on the maximum and minimum values
-    # of the portfolio returns
+    # of the portfolio returns, and the number of plot points to include
     bins = np.linspace(sorted_returns[0], sorted_returns[-1], num_plot_points)
 
     return h_var, bins
@@ -243,31 +340,49 @@ def plot_historical_var(x, a, bins):
     plt.title('Frequency vs Daily Returns')
     plt.show()
 
-# get equity price data from Yahoo
+
+def get_data(data):
+    """
+    Function to convert pandas DataFrames into numpy array's of shape (n*m), where n = the number of equities and m =
+    the number of days for which we have price or return data.
+
+    :param data: pd.DataFrame([float])
+    :return: np.array([float])
+    """
+
+    np_data = np.array(data)
+    array = []
+
+    for i in range(0, np_data.shape[1]):
+        array.append(np_data[:, i])
+
+    return np.array(array)
+
+
+# declare equities and time data
 start = datetime(2018, 1, 1)
 end = datetime(2019, 2, 20)
 equities = ['AAPL', 'GOOGL', 'BLK', 'IBM']
-prices = web.DataReader(equities, 'yahoo', start, end)['Close']
 
-# get the S&P500 benchmark price data from Yahoo
+# get all price and volume data from Yahoo Finance
+high_prices = web.DataReader(equities, 'yahoo', start, end)['High']
+low_prices = web.DataReader(equities, 'yahoo', start, end)['Low']
+open_prices = web.DataReader(equities, 'yahoo', start, end)['Open']
+close_prices = web.DataReader(equities, 'yahoo', start, end)['Close']
+volumes = web.DataReader(equities, 'yahoo', start, end)['Volume']
+
+# get the S&P500 benchmark price data from Yahoo Finance
 underlying = web.DataReader(['^GSPC'], 'yahoo', start, end)['Close']
 
 # calculate the daily returns of the equities and the S&P500 benchmark
-equity_returns = prices.div(prices.shift(1)).dropna()
+equity_returns = close_prices.div(close_prices.shift(1)).dropna()
 benchmark_returns = underlying.div(underlying.shift(1)).dropna()
 
 # declare the weight of each asset in the portfolio - each element in the row corresponds to the weight of the Nth asset
 W = np.array([0.15, 0.6, 0.2, 0.05])
 
-# convert the equity return data into an n*m numpy array, where n = the number of equities and m = the number of days
-# for which we have return data
-arr = np.array(equity_returns)
-array = []
-
-for i in range(0, arr.shape[1]):
-    array.append(arr[:, i])
-
-X = np.array(array) - 1
+# get historical return data for all equities
+X = get_data(equity_returns) - 1
 
 # calculate the historical returns of the portfolio
 port_returns = portfolio_returns(X, W)
@@ -302,3 +417,22 @@ H_VaR = historical_var(X, W, -0.02, 100)
 
 # plot the Historical VaR
 plot_historical_var(port_returns, -0.02, H_VaR[1])
+
+# declare SMA and EMA variables
+interval = 2
+alpha = 0.1
+
+# get price and volume data in numpy array form
+high = get_data(high_prices)
+low = get_data(low_prices)
+open = get_data(open_prices)
+close = get_data(close_prices)
+volume = get_data(volumes)
+
+# print price metrics for each equity
+for i in range(0, high.shape[0]):
+    print(high_prices.columns[i])
+    print('EMA = ', str(ema(close[i], alpha)[-1]))
+    print('SMA = ', str(sma(close[i], interval)[-1]))
+    print('TWAP = ', str(twap(high[i], low[i], open[i], close[i], interval)[-1]))
+    print('VWAP = ', str(vwap(high[i], low[i], close[i], volume[i], interval)[-1]))
