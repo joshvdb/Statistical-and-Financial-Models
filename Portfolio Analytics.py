@@ -1,7 +1,9 @@
-import unittest
 import numpy as np
 from scipy import integrate
+import pandas_datareader
 import matplotlib.pyplot as plt
+from datetime import datetime
+import pandas_datareader.data as web
 
 
 def portfolio_returns(returns, weights):
@@ -160,7 +162,7 @@ def analytical_var(returns, weights, a, n):
     return x, pdf, risk_range, a_var
 
 
-def historical_var(returns, weights, a):
+def historical_var(returns, weights, a, num_plot_points):
     """
     Calculate the Historical VaR for a portfolio comprised of returns.shape[0] assets. This takes in several parameters.
     The first is a numpy array - returns, where each row corresponds to the historical daily returns (given as a decimal
@@ -171,7 +173,8 @@ def historical_var(returns, weights, a):
     :param returns: np.array([float])
     :param weights: np.array([float])
     :param a: float
-    :return: float
+    :param num_plot_points: int
+    :return: float, np.array([float])
     """
 
     # calculate the total portfolio returns
@@ -189,7 +192,14 @@ def historical_var(returns, weights, a):
     # print the Historical VaR
     print('Historical VaR = ' + str(h_var * 100) + '% at ' + str(a * 100) + '% of daily returns')
 
-    return h_var
+    # sort the array of the portfolio returns in ascending order
+    sorted_returns = sorted(port_returns, reverse=False)
+
+    # create a numpy array of the bins to use for plotting the Historical VaR, based on the maximum and minimum values
+    # of the portfolio returns
+    bins = np.linspace(sorted_returns[0], sorted_returns[-1], num_plot_points)
+
+    return h_var, bins
 
 
 def plot_analytical_var(x, pdf, a):
@@ -233,24 +243,37 @@ def plot_historical_var(x, a, bins):
     plt.title('Frequency vs Daily Returns')
     plt.show()
 
+# get equity price data from Yahoo
+start = datetime(2018, 1, 1)
+end = datetime(2019, 2, 20)
+equities = ['AAPL', 'GOOGL', 'BLK', 'IBM']
+prices = web.DataReader(equities, 'yahoo', start, end)['Close']
+
+# get the S&P500 benchmark price data from Yahoo
+underlying = web.DataReader(['^GSPC'], 'yahoo', start, end)['Close']
+
+# calculate the daily returns of the equities and the S&P500 benchmark
+equity_returns = prices.div(prices.shift(1)).dropna()
+benchmark_returns = underlying.div(underlying.shift(1)).dropna()
 
 # declare the weight of each asset in the portfolio - each element in the row corresponds to the weight of the Nth asset
-W = np.array([0.25, 0.15, 0.2, 0.3, 0.05, 0.05])
+W = np.array([0.15, 0.6, 0.2, 0.05])
 
-# declare the returns of each asset in the portfolio - each row represents an asset, and each element in a row is the
-# daily return of that asset at a point in time. Here we have 6 assets, with 5 historical returns each
-X = np.array([[0.1, 0.3, 0.4, 0.8, 0.9],
-               [0.20, 0.90, 0.25, 0.1, 0.09],
-               [0.1, 0.85, 0.45, 0.29, 0.9],
-              [0.1, 0.82, 4.2, 0.26, 0.9],
-              [0.1, 0.82, 0.43, 0.23, 0.9],
-              [0.32, 0.24, 0.24, 0.1, 0.55]])
+# convert the equity return data into an n*m numpy array, where n = the number of equities and m = the number of days
+# for which we have return data
+arr = np.array(equity_returns)
+array = []
+
+for i in range(0, arr.shape[1]):
+    array.append(arr[:, i])
+
+X = np.array(array) - 1
 
 # calculate the historical returns of the portfolio
 port_returns = portfolio_returns(X, W)
 
 # declare the historical returns of the benchmark index
-market_returns = np.array([0.8,1.9,0.1003,10.9,0.1])
+market_returns = np.array(benchmark_returns)[:, 0] - 1
 
 # calculate the Beta of the portfolio
 B = beta(port_returns, market_returns)
@@ -269,41 +292,13 @@ print('Portfolio Alpha = ' + str(alpha(port_returns, 0.02, market_returns, B)))
 print('Portfolio Sharpe Ratio = ' + str(sharpe_ratio(port_returns, 0.02, X, W)))
 
 # calculate the Analytical VaR at -5% daily returns and the associated values
-x, pdf, a, A_VaR = analytical_var(X, W, -0.05, 100000)
+x, pdf, a, A_VaR = analytical_var(X, W, -0.02, 100000)
 
 # plot the Analytical VaR
 plot_analytical_var(x, pdf, a)
 
 # calculate  the Historical VaR at 50% daily returns
-H_VaR = historical_var(X, W, 0.5)
+H_VaR = historical_var(X, W, -0.02, 100)
 
 # plot the Historical VaR
-bins = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-plot_historical_var(port_returns, 0.5, bins)
-
-
-# perform unit testing to verify the values of the Analytical and Historical VaR
-class VaRTesting(unittest.TestCase):
-    """
-    Unit Testing class for the VaR functions.
-    """
-    def test_VaR(self):
-        """
-        Function to test the values of the Analytical and Historical VaR.
-
-        :return:
-        """
-
-        # calculate the Historical VaR
-        H_VaR = historical_var(X, W, 0.5)
-
-        # calculate the Analytical VaR
-        _, _, _, A_VaR = analytical_var(X, W, -0.05, 100000)
-
-        # test the Historical VaR - confirm that it has the correct value
-        self.assertEqual(H_VaR, 0.4)
-
-        # test the Analytical VaR - confirm that it has the correct value to 6 decimal places
-        self.assertEqual(round(A_VaR, 6), 0.080493)
-
-unittest.main()
+plot_historical_var(port_returns, -0.02, H_VaR[1])
