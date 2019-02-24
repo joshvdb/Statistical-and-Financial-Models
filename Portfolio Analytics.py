@@ -420,8 +420,8 @@ H_VaR = historical_var(X, W, -0.02, 100)
 plot_historical_var(port_returns, -0.02, H_VaR[1])
 
 # declare SMA and EMA variables
-interval = 2
-alpha = 0.1
+interval = 20
+alpha = 0.6
 
 # get price and volume data in numpy array form
 high = get_data(high_prices)
