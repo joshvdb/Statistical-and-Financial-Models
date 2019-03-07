@@ -364,9 +364,9 @@ def plot_historical_returns(port_returns, market_returns):
     plt.plot(x, port_returns, linewidth=1, color='b', label='Portfolio Returns')
     plt.plot(x, market_returns, linewidth=1, color='r', label='Benchmark Returns')
     plt.legend(loc='upper left')
-    plt.xlabel('Time')
-    plt.ylabel('Daily Returns')
-    plt.title('Daily Returns vs Time')
+    plt.xlabel('Time (days)')
+    plt.ylabel('Daily Return')
+    plt.title('Daily Return vs Time')
     plt.show()
 
 
@@ -380,12 +380,112 @@ def plot_returns_regression(port_returns, market_returns, regression):
     :return:
     """
 
-    plt.scatter(market_returns, port_returns, linewidth=1, color='b', label='Actual Returns')
+    plt.scatter(market_returns, port_returns, marker='.', linewidth=1, color='b', label='Actual Returns')
     plt.plot(market_returns, regression, linewidth=1, color='k', label='Returns Regression')
     plt.legend(loc='upper left')
-    plt.xlabel('Benchmark Returns')
-    plt.ylabel('Portfolio Returns')
+    plt.xlabel('Benchmark Daily Return')
+    plt.ylabel('Portfolio Daily Return')
     plt.title('Returns Regression')
+    plt.show()
+
+
+def plot_equity_prices(ticker, prices):
+    """
+    Function to plot the prices of a single equity.
+
+    :param ticker: str
+    :param prices: np.array([float])
+    :return:
+    """
+
+    # define x-axis data points
+    x = np.linspace(0, prices.shape[0], prices.shape[0])
+
+    plt.plot(x, prices[ticker], linewidth=1, color='b', label=ticker)
+    plt.legend(loc='upper left')
+    plt.xlabel('Time (days)')
+    plt.ylabel('Price')
+    plt.title('Price vs Time: ' + ticker)
+    plt.show()
+
+
+def equity_price_analytics(ticker, high_prices, low_prices, open_prices, close_prices, volume, alpha, interval):
+    """
+    Function to calculate the mean price, EMA, SMA, TWAP and VWAP of a single equity.
+
+    :param ticker: str
+    :param high_prices: pd.DataFrame([float])
+    :param low_prices: pd.DataFrame([float])
+    :param open_prices: pd.DataFrame([float])
+    :param close_prices: pd.DataFrame([float])
+    :param volume: pd.DataFrame([float])
+    :param alpha: float
+    :param interval: int
+    :return: np.array([float]), np.array([float]), np.array([float]), np.array([float]), np.array([float])
+    """
+
+    # get price and volume data in numpy array form
+    high = np.array(high_prices[ticker])
+    low = np.array(low_prices[ticker])
+    open = np.array(open_prices[ticker])
+    close = np.array(close_prices[ticker])
+    volume = np.array(volume[ticker])
+
+    # calculate price analytics
+    e_ma = ema(close, alpha)
+    s_ma = sma(close, interval)
+    t_wap = twap(high, low, open, close, interval)
+    v_wap = vwap(high, low, close, volume, interval)
+    mean_prices = (high + low + open + close) / 4
+
+    return e_ma, s_ma, t_wap, v_wap, mean_prices
+
+
+def plot_equity_price_analytics(ticker, e_ma, s_ma, t_wap, v_wap, mean_prices):
+    """
+    Function to plot the mean price, EMA, SMA, TWAP and VWAP of a single equity.
+
+    :param ticker: str
+    :param e_ma: np.array([float])
+    :param s_ma: np.array([float])
+    :param t_wap: np.array([float])
+    :param v_wap: np.array([float])
+    :param mean_prices: np.array([float])
+    :return:
+    """
+
+    # define x-axis data points
+    x = np.linspace(0, mean_prices.shape[0], mean_prices.shape[0])
+
+    plt.plot(x, mean_prices, linewidth=1, color='k', label='Mean Price')
+    plt.plot(x, e_ma, linewidth=1, color='r', label='EMA Price')
+    plt.plot(x[interval:], s_ma, linewidth=1, color='b', label='SMA Price')
+    plt.plot(x[interval:], t_wap, linewidth=1, color='g', label='TWAP Price')
+    plt.plot(x[interval:], v_wap, linewidth=1, color='m', label='VWAP Price')
+    plt.legend(loc='upper left')
+    plt.xlabel('Time (days)')
+    plt.ylabel('Price')
+    plt.title('Price vs Time: ' + ticker)
+    plt.show()
+
+
+def plot_equity_returns(ticker, returns):
+    """
+    Function to plot the returns of a single equity.
+
+    :param ticker: str
+    :param returns: np.array([float])
+    :return:
+    """
+
+    # define x-axis data points
+    x = np.linspace(0, returns.shape[0], returns.shape[0])
+
+    plt.plot(x, returns[ticker], linewidth=1, color='b', label=ticker)
+    plt.legend(loc='upper left')
+    plt.xlabel('Time (days)')
+    plt.ylabel('Daily Return')
+    plt.title('Return vs Time for: ' + ticker)
     plt.show()
 
 
@@ -425,6 +525,12 @@ underlying = web.DataReader(['^GSPC'], 'yahoo', start, end)['Close']
 # calculate the daily returns of the equities and the S&P500 benchmark
 equity_returns = close_prices.div(close_prices.iloc[0])
 benchmark_returns = underlying.div(underlying.iloc[0])
+
+# plot the prices of a single equity
+plot_equity_prices('AAPL', close_prices)
+
+# plot the returns of a single equity
+plot_equity_returns('AAPL', (equity_returns - 1))
 
 # declare the weight of each asset in the portfolio - each element in the row corresponds to the weight of the Nth asset
 w = np.array([0.15, 0.6, 0.2, 0.05])
@@ -478,18 +584,8 @@ plot_historical_var(port_returns, -0.02, H_VaR[1])
 interval = 20
 alpha = 0.6
 
-# get price and volume data in numpy array form
-high = get_data(high_prices)
-low = get_data(low_prices)
-open = get_data(open_prices)
-close = get_data(close_prices)
-volume = get_data(volumes)
+# calculate price analytics
+e_ma, s_ma, t_wap, v_wap, mean_prices = equity_price_analytics('AAPL', high_prices, low_prices, open_prices, close_prices, volumes, alpha, interval)
 
-# print price metrics for each equity
-for i in range(0, high.shape[0]):
-    print('')
-    print(high_prices.columns[i])
-    print('EMA = ', str(ema(close[i], alpha)[-1]))
-    print('SMA = ', str(sma(close[i], interval)[-1]))
-    print('TWAP = ', str(twap(high[i], low[i], open[i], close[i], interval)[-1]))
-    print('VWAP = ', str(vwap(high[i], low[i], close[i], volume[i], interval)[-1]))
+# plot price analytics
+plot_equity_price_analytics('AAPL', e_ma, s_ma, t_wap, v_wap, mean_prices)
