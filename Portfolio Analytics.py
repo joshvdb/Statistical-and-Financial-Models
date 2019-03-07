@@ -146,9 +146,12 @@ def beta(port_returns, market_returns):
     :return: float
     """
 
+    # calculate the covariance matrix of the returns of the portfolio and the returns of the market
+    covariance_matrix = np.cov(np.array([port_returns, market_returns]))
+
     # the portfolio Beta is given by the covariance of the returns of the portfolio and the returns of the market,
     # divided by the variance of the returns of the market
-    b = np.cov(np.array([port_returns, market_returns]))[0][1]/np.cov([port_returns, market_returns])[1][1]
+    b = covariance_matrix[0][1]/covariance_matrix[1][1]
 
     return b
 
@@ -376,8 +379,8 @@ volumes = web.DataReader(equities, 'yahoo', start, end)['Volume']
 underlying = web.DataReader(['^GSPC'], 'yahoo', start, end)['Close']
 
 # calculate the daily returns of the equities and the S&P500 benchmark
-equity_returns = close_prices.div(close_prices.shift(1)).dropna()
-benchmark_returns = underlying.div(underlying.shift(1)).dropna()
+equity_returns = close_prices.div(close_prices.iloc[0])
+benchmark_returns = underlying.div(underlying.iloc[0])
 
 # declare the weight of each asset in the portfolio - each element in the row corresponds to the weight of the Nth asset
 W = np.array([0.15, 0.6, 0.2, 0.05])
