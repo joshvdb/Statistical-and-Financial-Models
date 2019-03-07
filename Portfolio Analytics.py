@@ -1,6 +1,7 @@
 import numpy as np
 from numba import jit
 from scipy import integrate
+import statsmodels.api as sm
 from datetime import datetime
 import matplotlib.pyplot as plt
 import pandas_datareader.data as web
@@ -120,7 +121,7 @@ def portfolio_returns(returns, weights):
     return port_returns
 
 
-def alpha(port_returns, risk_free_rate, market_returns, b):
+def alpha_rf(port_returns, risk_free_rate, market_returns, b):
     """
     Calculate the Alpha of the portfolio.
 
@@ -132,28 +133,34 @@ def alpha(port_returns, risk_free_rate, market_returns, b):
     """
 
     # the portfolio Alpha is given by the below equation, as stated by the Capital Asset Pricing Model
-    a = np.sum(port_returns - risk_free_rate + b*(market_returns - risk_free_rate))
+    alpha = np.mean(port_returns) - risk_free_rate + b*(np.mean(market_returns) - risk_free_rate)
 
-    return a
+    return alpha
 
 
-def beta(port_returns, market_returns):
+def portfolio_analytics(port_returns, market_returns):
     """
-    Calculate the Beta of the portfolio.
+    Perform a regression on the portfolio returns and benchmark returns to calculate the Alpha, beta, and R-squared of
+    the portfolio. This function will also return a numpy array containing the regression prediction values.
 
     :param port_returns: np.array([float])
     :param market_returns: np.array([float])
-    :return: float
+    :return: float, float, float, np.array([float])
     """
 
-    # calculate the covariance matrix of the returns of the portfolio and the returns of the market
-    covariance_matrix = np.cov(np.array([port_returns, market_returns]))
+    # add the intercept to the model
+    x2 = sm.add_constant(market_returns)
 
-    # the portfolio Beta is given by the covariance of the returns of the portfolio and the returns of the market,
-    # divided by the variance of the returns of the market
-    b = covariance_matrix[0][1]/covariance_matrix[1][1]
+    # train the model
+    estimator = sm.OLS(port_returns, x2)
+    model = estimator.fit()
 
-    return b
+    # get portfolio analytics
+    alpha, beta = model.params
+    r_squared = model.rsquared
+    regression = model.predict()
+
+    return alpha, beta, r_squared, regression
 
 
 def portfolio_volatility(returns, weights):
@@ -167,13 +174,13 @@ def portfolio_volatility(returns, weights):
     """
 
     # generate the transform of the 1D numpy weights array
-    W_T = np.array([[x] for x in weights])
+    w_T = np.array([[x] for x in weights])
 
     # calculate the covariance matrix of the asset returns
     covariance = np.cov(returns)
 
     # calculate the portfolio volatility
-    port_volatility = np.dot(np.dot(weights, covariance), W_T)[0]
+    port_volatility = np.dot(np.dot(weights, covariance), w_T)[0]
 
     return port_volatility
 
@@ -193,24 +200,21 @@ def sharpe_ratio(port_returns, risk_free_rate, asset_returns, weights):
     portfolio_standard_deviation = np.sqrt(portfolio_volatility(asset_returns, weights))
 
     # calculate the Sharpe ratio of the portfolio
-    sr = np.sum((port_returns - risk_free_rate))/portfolio_standard_deviation
+    sr = (np.mean(port_returns) - risk_free_rate)/portfolio_standard_deviation
 
     return sr
 
 
-def r_squared(port_returns, market_returns):
+def tracking_error(port_returns, market_returns):
     """
-    Calculate the R-Squared value of the portfolio.
+    Calculate the Tracking Error of the portfolio relative to the benchmark.
 
     :param port_returns: np.array([float])
     :param market_returns: np.array([float])
     :return: float
     """
 
-    # calculate the R-Squared value of the portfolio using the standard statistical definition of R-Squared
-    rs = 1 - np.var(port_returns-market_returns)/np.var(market_returns)
-
-    return rs
+    return np.std(port_returns - market_returns)
 
 
 def analytical_var(returns, weights, a, n):
@@ -345,6 +349,46 @@ def plot_historical_var(x, a, bins):
     plt.show()
 
 
+def plot_historical_returns(port_returns, market_returns):
+    """
+    Function to plot the historical portfolio returns.
+
+    :param port_returns: np.array([float])
+    :param market_returns: np.array([float])
+    :return:
+    """
+
+    # define x-axis data points
+    x = np.linspace(0, port_returns.shape[0], port_returns.shape[0])
+
+    plt.plot(x, port_returns, linewidth=1, color='b', label='Portfolio Returns')
+    plt.plot(x, market_returns, linewidth=1, color='r', label='Benchmark Returns')
+    plt.legend(loc='upper left')
+    plt.xlabel('Time')
+    plt.ylabel('Daily Returns')
+    plt.title('Daily Returns vs Time')
+    plt.show()
+
+
+def plot_returns_regression(port_returns, market_returns, regression):
+    """
+    Function to plot the Returns Regression.
+
+    :param port_returns: np.array([float])
+    :param market_returns: np.array([float])
+    :param regression: np.array([float])
+    :return:
+    """
+
+    plt.scatter(market_returns, port_returns, linewidth=1, color='b', label='Actual Returns')
+    plt.plot(market_returns, regression, linewidth=1, color='k', label='Returns Regression')
+    plt.legend(loc='upper left')
+    plt.xlabel('Benchmark Returns')
+    plt.ylabel('Portfolio Returns')
+    plt.title('Returns Regression')
+    plt.show()
+
+
 def get_data(data):
     """
     Function to convert pandas DataFrames into numpy array's of shape (n*m), where n = the number of equities and m =
@@ -365,7 +409,7 @@ def get_data(data):
 
 # declare equities and time data
 start = datetime(2018, 1, 1)
-end = datetime(2019, 2, 20)
+end = datetime(2019, 3, 7)
 equities = ['AAPL', 'GOOGL', 'BLK', 'IBM']
 
 # get all price and volume data from Yahoo Finance
@@ -383,41 +427,49 @@ equity_returns = close_prices.div(close_prices.iloc[0])
 benchmark_returns = underlying.div(underlying.iloc[0])
 
 # declare the weight of each asset in the portfolio - each element in the row corresponds to the weight of the Nth asset
-W = np.array([0.15, 0.6, 0.2, 0.05])
+w = np.array([0.15, 0.6, 0.2, 0.05])
 
 # get historical return data for all equities
-X = get_data(equity_returns) - 1
+eq_returns = get_data(equity_returns) - 1
 
 # calculate the historical returns of the portfolio
-port_returns = portfolio_returns(X, W)
+port_returns = portfolio_returns(eq_returns, w)
 
 # declare the historical returns of the benchmark index
 market_returns = np.array(benchmark_returns)[:, 0] - 1
 
-# calculate the Beta of the portfolio
-B = beta(port_returns, market_returns)
+# calculate portfolio analytics
+alpha, beta, r_squared, regression = portfolio_analytics(port_returns, market_returns)
+
+# plot historical returns
+plot_historical_returns(port_returns, market_returns)
+
+# plot Returns Regression
+plot_returns_regression(port_returns, market_returns, regression)
 
 # print the various portfolio analytics values
-print('Historical Portfolio Returns = ' + str(port_returns))
+print('Portfolio R-Squared = ' + str(r_squared))
 
-print('Portfolio R-Squared = ' + str(r_squared(port_returns, market_returns)))
+print('Portfolio Beta = ' + str(beta))
 
-print('Portfolio Beta = ' + str(B))
+print('Portfolio Volatility = ' + str(portfolio_volatility(eq_returns, w)))
 
-print('Portfolio Volatility = ' + str(portfolio_volatility(port_returns, W)))
+print('Portfolio Alpha (from the regression) = ' + str(alpha))
 
-print('Portfolio Alpha = ' + str(alpha(port_returns, 0.02, market_returns, B)))
+print('Portfolio Alpha (based on risk-free rate) = ' + str(alpha_rf(port_returns, 0.02, market_returns, beta)))
 
-print('Portfolio Sharpe Ratio = ' + str(sharpe_ratio(port_returns, 0.02, X, W)))
+print('Portfolio Sharpe Ratio = ' + str(sharpe_ratio(port_returns, 0.02, eq_returns, w)))
+
+print('Portfolio Tracking Error = ' + str(tracking_error(port_returns, market_returns)))
 
 # calculate the Analytical VaR at -5% daily returns and the associated values
-x, pdf, a, A_VaR = analytical_var(X, W, -0.02, 100000)
+x, pdf, a, A_VaR = analytical_var(eq_returns, w, -0.02, 100000)
 
 # plot the Analytical VaR
 plot_analytical_var(x, pdf, a)
 
 # calculate  the Historical VaR at 50% daily returns
-H_VaR = historical_var(X, W, -0.02, 100)
+H_VaR = historical_var(eq_returns, w, -0.02, 100)
 
 # plot the Historical VaR
 plot_historical_var(port_returns, -0.02, H_VaR[1])
@@ -435,6 +487,7 @@ volume = get_data(volumes)
 
 # print price metrics for each equity
 for i in range(0, high.shape[0]):
+    print('')
     print(high_prices.columns[i])
     print('EMA = ', str(ema(close[i], alpha)[-1]))
     print('SMA = ', str(sma(close[i], interval)[-1]))
