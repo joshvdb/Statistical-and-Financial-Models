@@ -582,10 +582,13 @@ plot_historical_var(port_returns, -0.02, H_VaR[1])
 
 # declare SMA and EMA variables
 interval = 20
-alpha = 0.6
+alpha = 0.3
+
+# define the ticker of the stock to look at
+ticker = 'AAPL'
 
 # calculate price analytics
-e_ma, s_ma, t_wap, v_wap, mean_prices = equity_price_analytics('AAPL', high_prices, low_prices, open_prices, close_prices, volumes, alpha, interval)
+e_ma, s_ma, t_wap, v_wap, mean_prices = equity_price_analytics(ticker, high_prices, low_prices, open_prices, close_prices, volumes, alpha, interval)
 
 # plot price analytics
-plot_equity_price_analytics('AAPL', e_ma, s_ma, t_wap, v_wap, mean_prices)
+plot_equity_price_analytics(ticker, e_ma, s_ma, t_wap, v_wap, mean_prices)
