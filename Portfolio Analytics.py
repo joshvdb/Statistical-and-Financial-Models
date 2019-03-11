@@ -217,30 +217,85 @@ def tracking_error(port_returns, market_returns):
     return np.std(port_returns - market_returns)
 
 
-def analytical_var(returns, weights, a, n):
+def risk_metrics(returns, weights, var_p, alpha, d):
     """
-    Calculate the Analytical VaR for a portfolio comprised of returns.shape[0] assets. This takes in several parameters.
-    The first is a numpy array - returns, where each row corresponds to the historical daily returns (given as a decimal
-    value) of each asset. Next the numpy array, weights, represents the weight of each asset in the portfolio. The
-    integer a is the percentage point from which we take the VaR - for example, a value of a = 0.05 represents the cdf
-    up to 5% of daily portfolio returns. Finally the integer n represents the number of data points to use when plotting
-    the Normal Distribution.
+    Calculate the Analytical VaR and Expected Shortfall for a portfolio, using both the Normal distribution and the
+    T-distribution.
 
-    :param returns: np.array([float])
-    :param weights: np.array([float])
-    :param a: float
-    :param n: int
-    :return: np.array([float]), np.array([float]), int, float
+    :param returns: np.array([float]) - the historical portfolio returns
+    :param weights: np.array([float]) - the weights of the assets in the portfolio
+    :param var_p: float - the value of the daily returns at which to take the Analytical VaR
+    :param alpha: float - the level at which to calculate Expected Shortfall
+    :param d: int - the number of degrees of freedom to use
+    :return: float, float, float, float, float, float, float, float, float
     """
+
+    # calculate the portfolio volatility (variance of historical returns
+    var = portfolio_volatility(returns, weights)
 
     # calculate the standard deviation of the portfolio
-    sigma = np.sqrt(portfolio_volatility(returns, weights))
+    sigma = np.sqrt(var)
 
     # calculate the mean return of the portfolio
     mu = np.sum(portfolio_returns(returns, weights))/returns.shape[1]
 
-    # set the plot range at 9 standard deviations from the mean in both the left and right directions
-    plot_range = 9 * sigma
+    # integrate the Probability Density Function to find the Analytical Value at Risk for both Normal and t distributions
+    a_var, a_var_error = integrate.quad(lambda y: stats.norm(mu, sigma).pdf(y), -np.inf, var_p)
+    t_dist_a_var, t_dist_a_var_error = integrate.quad(lambda y: stats.t(d).pdf(y), -np.inf, var_p)
+
+    # calculate the expected shortfall for each distribution
+    es = (stats.norm.pdf(stats.norm.ppf(alpha)) * sigma)/alpha - mu
+    t_dist_es = (stats.t(d).pdf(stats.t(d).ppf(alpha)) * sigma * (d + (stats.t(d).ppf(alpha))**2))/(alpha * (d - 1)) - mu
+
+    # print the Analytical VaR
+    print('Analytical VaR (Normal) = ' + str(a_var * 100) + '% at ' + str(var_p * 100) + '% of daily returns')
+    print('Analytical VaR (t-distribution) = ' + str(t_dist_a_var * 100) + '% at ' + str(var_p * 100) + '% of daily returns')
+    print('Expected Shortfall (Normal) at ' + str(alpha * 100) + '% level = ' + str(es * 100))
+    print('Expected Shortfall (t-distribution) at ' + str(alpha * 100) + '% level = ' + str(t_dist_es * 100))
+
+    return var, sigma, mu, a_var, a_var_error, t_dist_a_var, t_dist_a_var_error, es, t_dist_es
+
+
+def historical_var(port_returns, var_p):
+    """
+    Calculate the Historical VaR for a portfolio.
+
+    :param port_returns: np.array([float])
+    :param var_p: float
+    :return: float
+    """
+
+    # calculate the Historical VaR of the portfolio - check if the daily return value is less than a% - if it is, then
+    # it is counted in the Historical VaR calculation
+    relevant_returns = 0
+    for i in range(0, port_returns.shape[0]):
+        if port_returns[i] < var_p:
+            relevant_returns += 1
+
+    h_var = relevant_returns/port_returns.shape[0]
+
+    # print the Historical VaR
+    print('Historical VaR = ' + str(h_var * 100) + '% at ' + str(var_p * 100) + '% of daily returns')
+
+    return h_var
+
+
+def plot_analytical_var(var_p, sigma, mu, n, z, plot='Normal'):
+    """
+    Plot the normal or t distribution of portfolio returns, showing the area under the curve that corresponds to the
+    Analytical VaR of the portfolio.
+
+    :param var_p: float - the value of the daily returns at which to take the Analytical VaR
+    :param sigma: float - the standard deviation
+    :param mu: float - the mean
+    :param n: int - the number of points to use in the plot
+    :param z: float - the number of standard deviations from the mean to use as the plot range
+    :param plot: str - (Normal or T-dist) - used to select the function to plot
+    :return:
+    """
+
+    # set the plot range at z standard deviations from the mean in both the left and right directions
+    plot_range = z * sigma
 
     # set the bottom value on the x-axis (of % daily returns)
     bottom = mu - plot_range
@@ -251,51 +306,36 @@ def analytical_var(returns, weights, a, n):
     # declare the numpy array of the range of x values for the normal distribution
     x = np.linspace(bottom, top, n)
 
-    # calculate the normal distribution pdf for plotting purposes
-    pdf = stats.norm.pdf(x, mu, sigma)
-
     # calculate the index of the nearest daily return in x corresponding to a%
-    risk_range = (np.abs(x - a)).argmin()
+    risk_range = (np.abs(x - var_p)).argmin()
 
-    # integrate the Probability Density Function to find the Analytical Value at Risk
-    a_var, a_var_error = integrate.quad(lambda x: stats.norm.pdf(x, mu, sigma), -np.inf, a)
+    # calculate the normal distribution pdf for plotting purposes
+    if plot == 'Normal':
+        pdf = stats.norm(mu, sigma).pdf(x)
+    else:
+        pdf = stats.t(sigma).pdf(x)
+        plot = 'T-dist'
 
-    # print the Analytical VaR
-    print('Analytical VaR = ' + str(a_var * 100) + '% at ' + str(a * 100) + '% of daily returns')
+    plt.plot(x, pdf, linewidth=2, color='r', label='Distribution of Returns')
+    plt.fill_between(x[0:risk_range], pdf[0:risk_range], facecolor='blue', label='Analytical VaR')
+    plt.legend(loc='upper left')
+    plt.xlabel('Daily Returns')
+    plt.ylabel('Frequency')
+    plt.title('Frequency vs Daily Returns (' + plot + ')')
+    plt.show()
 
-    return x, pdf, risk_range, a_var, a_var_error
 
-
-def historical_var(returns, weights, a, num_plot_points):
+def plot_historical_var(port_returns, var_p, num_plot_points):
     """
-    Calculate the Historical VaR for a portfolio comprised of returns.shape[0] assets. This takes in several parameters.
-    The first is a numpy array - returns, where each row corresponds to the historical daily returns (given as a decimal
-    value) of each asset. Next the numpy array, weights, represents the weight of each asset in the portfolio. Finally,
-    the integer a is the percentage point from which we take the VaR - for example, a value of a = 0.05 represents the
-    cdf up to 5% of daily portfolio returns. The variable num_plot_points is the number of plot points to use on the
-    horizontal axis (the %daily return) when plotting the Historical VaR.
+    Plot a histogram showing the distribution of portfolio returns - mark the cutoff point that corresponds to the
+    Historical VaR of the portfolio. The variable x is the historical distribution of returns of the portfolio, a is
+    the cutoff value, and the bins are the bins in which to stratify the historical returns.
 
-    :param returns: np.array([float])
-    :param weights: np.array([float])
-    :param a: float
+    :param port_returns: np.array([float])
+    :param var_p: float
     :param num_plot_points: int
-    :return: float, np.array([float])
+    :return:
     """
-
-    # calculate the total portfolio returns
-    port_returns = portfolio_returns(returns, weights)
-
-    # calculate the Historical VaR of the portfolio - check if the daily return value is less than a% - if it is, then
-    # it is counted in the Historical VaR calculation
-    relevant_returns = 0
-    for i in range(0, port_returns.shape[0]):
-        if port_returns[i] < a:
-            relevant_returns += 1
-
-    h_var = relevant_returns/port_returns.shape[0]
-
-    # print the Historical VaR
-    print('Historical VaR = ' + str(h_var * 100) + '% at ' + str(a * 100) + '% of daily returns')
 
     # sort the array of the portfolio returns in ascending order
     sorted_returns = sorted(port_returns, reverse=False)
@@ -304,44 +344,8 @@ def historical_var(returns, weights, a, num_plot_points):
     # of the portfolio returns, and the number of plot points to include
     bins = np.linspace(sorted_returns[0], sorted_returns[-1], num_plot_points)
 
-    return h_var, bins
-
-
-def plot_analytical_var(x, pdf, a):
-    """
-    Plot the normal distribution of portfolio returns - show the area under the normal curve that corresponds to the
-    Analytical VaR of the portfolio. The variable x is the range of daily returns of the portfolio (the x-axis), pdf
-    is the Normal Distribution of the historical returns of the portfolio (the y-axis), and a is the cutoff value.
-
-    :param x: np.array([float])
-    :param pdf: np.array([float])
-    :param a: float
-    :return:
-    """
-
-    plt.plot(x, pdf, linewidth=2, color='r', label='Distribution of Returns')
-    plt.fill_between(x[0:a], pdf[0:a], facecolor='blue', label='Analytical VaR')
-    plt.legend(loc='upper left')
-    plt.xlabel('Daily Returns')
-    plt.ylabel('Frequency')
-    plt.title('Frequency vs Daily Returns')
-    plt.show()
-
-
-def plot_historical_var(x, a, bins):
-    """
-    Plot a histogram showing the distribution of portfolio returns - mark the cutoff point that corresponds to the
-    Historical VaR of the portfolio. The variable x is the historical distribution of returns of the portfolio, a is
-    the cutoff value, and the bins are the bins in which to stratify the historical returns.
-
-    :param x: np.array([float])
-    :param a: float
-    :param bins: np.array([float])
-    :return:
-    """
-
-    plt.hist(x, bins, label='Distribution of Returns')
-    plt.axvline(x=a, ymin=0, color='r', label='Historical VaR cutoff point')
+    plt.hist(port_returns, bins, label='Distribution of Returns')
+    plt.axvline(x=var_p, ymin=0, color='r', label='Historical VaR cutoff point')
     plt.legend(loc='upper left')
     plt.xlabel('Daily Returns')
     plt.ylabel('Frequency')
@@ -568,17 +572,18 @@ print('Portfolio Sharpe Ratio = ' + str(sharpe_ratio(port_returns, rf, eq_return
 
 print('Portfolio Tracking Error = ' + str(tracking_error(port_returns, market_returns)))
 
-# calculate the Analytical VaR at -9% daily returns and the associated values
-x, pdf, a, A_VaR, a_var_error = analytical_var(eq_returns, w, var_p, 100000)
+# calculate the Analytical VaR and the associated values
+var, sigma, mu, a_var, a_var_error, t_dist_a_var, t_dist_a_var_error, es, t_dist_es = risk_metrics(eq_returns, w, var_p, 0.05, 5)
 
 # plot the Analytical VaR
-plot_analytical_var(x, pdf, a)
+plot_analytical_var(var_p, sigma, mu, 10000, 10, 'Normal')
+plot_analytical_var(var_p, sigma, mu, 10000, 100, 'T-dist')
 
-# calculate  the Historical VaR at -9% daily returns
-H_VaR = historical_var(eq_returns, w, var_p, 100)
+# calculate  the Historical VaR
+H_VaR = historical_var(port_returns, var_p)
 
 # plot the Historical VaR
-plot_historical_var(port_returns, var_p, H_VaR[1])
+plot_historical_var(port_returns, var_p, 100)
 
 # declare SMA and EMA variables
 interval = 20
