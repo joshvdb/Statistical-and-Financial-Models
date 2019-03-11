@@ -1,10 +1,10 @@
 import numpy as np
 from numba import jit
-from scipy import integrate
 import statsmodels.api as sm
 from datetime import datetime
 import matplotlib.pyplot as plt
 import pandas_datareader.data as web
+from scipy import integrate, stats
 
 
 @jit(nopython=True, cache=False)
@@ -251,19 +251,19 @@ def analytical_var(returns, weights, a, n):
     # declare the numpy array of the range of x values for the normal distribution
     x = np.linspace(bottom, top, n)
 
-    # calculate the pdf of the normal distribution
-    pdf = 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(- (x - mu) ** 2 / (2 * sigma ** 2))
+    # calculate the normal distribution pdf for plotting purposes
+    pdf = stats.norm.pdf(x, mu, sigma)
 
     # calculate the index of the nearest daily return in x corresponding to a%
     risk_range = (np.abs(x - a)).argmin()
 
-    # use Simpsons rule to estimate the cdf of the Normal distribution up to a%
-    a_var = integrate.simps(pdf[0:risk_range], x[0:risk_range])
+    # integrate the Probability Density Function to find the Analytical Value at Risk
+    a_var, a_var_error = integrate.quad(lambda x: stats.norm.pdf(x, mu, sigma), -np.inf, a)
 
     # print the Analytical VaR
-    print('Analytical VaR = ' + str(a_var * 100) + '% at ' + str(x[risk_range] * 100) + '% of daily returns')
+    print('Analytical VaR = ' + str(a_var * 100) + '% at ' + str(a * 100) + '% of daily returns')
 
-    return x, pdf, risk_range, a_var
+    return x, pdf, risk_range, a_var, a_var_error
 
 
 def historical_var(returns, weights, a, num_plot_points):
@@ -509,7 +509,7 @@ def get_data(data):
 
 # declare equities and time data
 start = datetime(2018, 1, 1)
-end = datetime(2019, 3, 7)
+end = datetime(2019, 3, 11)
 equities = ['AAPL', 'GOOGL', 'BLK', 'IBM']
 
 # get all price and volume data from Yahoo Finance
@@ -525,12 +525,6 @@ underlying = web.DataReader(['^GSPC'], 'yahoo', start, end)['Close']
 # calculate the daily returns of the equities and the S&P500 benchmark
 equity_returns = close_prices.div(close_prices.iloc[0])
 benchmark_returns = underlying.div(underlying.iloc[0])
-
-# plot the prices of a single equity
-plot_equity_prices('AAPL', close_prices)
-
-# plot the returns of a single equity
-plot_equity_returns('AAPL', (equity_returns - 1))
 
 # declare the weight of each asset in the portfolio - each element in the row corresponds to the weight of the Nth asset
 w = np.array([0.15, 0.6, 0.2, 0.05])
@@ -553,6 +547,12 @@ plot_historical_returns(port_returns, market_returns)
 # plot Returns Regression
 plot_returns_regression(port_returns, market_returns, regression)
 
+# set the VaR percentage
+var_p = -0.09
+
+# set the risk-free rate
+rf = 0.02
+
 # print the various portfolio analytics values
 print('Portfolio R-Squared = ' + str(r_squared))
 
@@ -562,30 +562,36 @@ print('Portfolio Volatility = ' + str(portfolio_volatility(eq_returns, w)))
 
 print('Portfolio Alpha (from the regression) = ' + str(alpha))
 
-print('Portfolio Alpha (based on risk-free rate) = ' + str(alpha_rf(port_returns, 0.02, market_returns, beta)))
+print('Portfolio Alpha (based on risk-free rate) = ' + str(alpha_rf(port_returns, rf, market_returns, beta)))
 
-print('Portfolio Sharpe Ratio = ' + str(sharpe_ratio(port_returns, 0.02, eq_returns, w)))
+print('Portfolio Sharpe Ratio = ' + str(sharpe_ratio(port_returns, rf, eq_returns, w)))
 
 print('Portfolio Tracking Error = ' + str(tracking_error(port_returns, market_returns)))
 
-# calculate the Analytical VaR at -5% daily returns and the associated values
-x, pdf, a, A_VaR = analytical_var(eq_returns, w, -0.02, 100000)
+# calculate the Analytical VaR at -9% daily returns and the associated values
+x, pdf, a, A_VaR, a_var_error = analytical_var(eq_returns, w, var_p, 100000)
 
 # plot the Analytical VaR
 plot_analytical_var(x, pdf, a)
 
-# calculate  the Historical VaR at 50% daily returns
-H_VaR = historical_var(eq_returns, w, -0.02, 100)
+# calculate  the Historical VaR at -9% daily returns
+H_VaR = historical_var(eq_returns, w, var_p, 100)
 
 # plot the Historical VaR
-plot_historical_var(port_returns, -0.02, H_VaR[1])
+plot_historical_var(port_returns, var_p, H_VaR[1])
 
 # declare SMA and EMA variables
 interval = 20
-alpha = 0.3
+alpha = 0.19
 
 # define the ticker of the stock to look at
 ticker = 'AAPL'
+
+# plot the prices of a single equity
+plot_equity_prices(ticker, close_prices)
+
+# plot the returns of a single equity
+plot_equity_returns(ticker, (equity_returns - 1))
 
 # calculate price analytics
 e_ma, s_ma, t_wap, v_wap, mean_prices = equity_price_analytics(ticker, high_prices, low_prices, open_prices, close_prices, volumes, alpha, interval)
