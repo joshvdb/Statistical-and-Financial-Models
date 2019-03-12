@@ -415,7 +415,7 @@ def plot_equity_prices(ticker, prices):
 
 def equity_price_analytics(ticker, high_prices, low_prices, open_prices, close_prices, volume, alpha, interval):
     """
-    Function to calculate the mean price, EMA, SMA, TWAP and VWAP of a single equity.
+    Function to calculate the EMA, SMA, TWAP and VWAP of a single equity.
 
     :param ticker: str
     :param high_prices: pd.DataFrame([float])
@@ -440,9 +440,8 @@ def equity_price_analytics(ticker, high_prices, low_prices, open_prices, close_p
     s_ma = sma(close, interval)
     t_wap = twap(high, low, open, close, interval)
     v_wap = vwap(high, low, close, volume, interval)
-    mean_prices = (high + low + open + close) / 4
 
-    return e_ma, s_ma, t_wap, v_wap, mean_prices
+    return e_ma, s_ma, t_wap, v_wap, close
 
 
 def plot_equity_price_analytics(ticker, e_ma, s_ma, t_wap, v_wap, mean_prices):
@@ -599,7 +598,7 @@ plot_equity_prices(ticker, close_prices)
 plot_equity_returns(ticker, (equity_returns - 1))
 
 # calculate price analytics
-e_ma, s_ma, t_wap, v_wap, mean_prices = equity_price_analytics(ticker, high_prices, low_prices, open_prices, close_prices, volumes, alpha, interval)
+e_ma, s_ma, t_wap, v_wap, close = equity_price_analytics(ticker, high_prices, low_prices, open_prices, close_prices, volumes, alpha, interval)
 
 # plot price analytics
-plot_equity_price_analytics(ticker, e_ma, s_ma, t_wap, v_wap, mean_prices)
+plot_equity_price_analytics(ticker, e_ma, s_ma, t_wap, v_wap, close)
